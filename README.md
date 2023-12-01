@@ -127,3 +127,11 @@ Come leggere MongoDB tramite Mongoose dentro la nostra applicazione scritta con 
     const newUser = new User(data); // crea un nuovo documento
     await newUser.save(); // salva il documento in modo persistente su DB
     ```
+- se voglio utilizare variabili d'ambiente è utile scaricare il pacchetto `dotenv` che andrà importato all'inizio del mio file principale nel seguente modo:
+
+```js
+import dotenv from "dotenv";
+dotenv.config();
+```
+
+- una volta importato posso richiamare le variabili di ambiente dal file `.env` usando la scrittura `process.env.VAR_NAME`
