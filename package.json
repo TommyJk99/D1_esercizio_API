@@ -1,0 +1,18 @@
+{
+  "name": "d1_esercizio",
+  "version": "1.0.0",
+  "description": "Esercizio epicode sulle API",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon src/index.js"
+  },
+  "author": "Thomas",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^8.0.2",
+    "nodemon": "^3.0.1"
+  }
+}
