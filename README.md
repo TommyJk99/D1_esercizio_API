@@ -161,7 +161,7 @@ Come leggere MongoDB tramite Mongoose dentro la nostra applicazione scritta con 
 
 ## ALCUNI ESEMPI:
 
-- Nell'esempio sottostante ad una chiamata GET all'URL `...api/users/` il server (MongoDB) riponderà con un vettore (poichè uso la funzione map su un array di oggetti) contenente il nome di tutti gli utenti.
+- Nell'esempio sottostante ad una chiamata GET all'URL `...api/users/` il server (MongoDB) riponderà con un array (poichè uso la funzione map su un array di oggetti) contenente il nome di tutti gli utenti.
 
 ```js
 import express from "express";
