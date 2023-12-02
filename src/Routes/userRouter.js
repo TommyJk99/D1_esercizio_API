@@ -4,8 +4,14 @@ import { User } from "../models/users.js";
 const userRouter = express.Router();
 userRouter.use(express.json());
 
-userRouter.get("/test", async (req, res) => {
-  res.json({ message: "Users router is working! ❤️" });
+userRouter.get("/", async (req, res, next) => {
+  try {
+    const users = await User.find({}, "name");
+    const name = users.map((user) => user.name);
+    res.json(name);
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default userRouter;

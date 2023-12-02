@@ -85,6 +85,37 @@ Inoltre è importante ricordarsi di importare i vari router:
 import apiRouter from "./apiRouter.js";
 ```
 
+## TENERE TRACCIA DELLE ROTTE
+
+Per tenere traccia delle varie rotte è possibile installare `npm install express-list-endpoints`. Una volta importato come `import list from "express-list-endpoints"` è possibile fare ciò che segue:
+
+```js
+mongoose
+  .connect(process.env.MONGO_URL)
+  .then(() => {
+    server.listen(port, () => {
+      console.log("🍇 Server listening to port:", port);
+      console.log(list(server)); //questo è il passaggio fondamentale
+    });
+  })
+  .catch(() => {
+    console.log("Errore nella connessione al DB", process.env.MONGO_URL);
+  });
+```
+
+Così facendo a terminale si avrà la lista di tutte le rotte definite in Express, e verranno mostrate informazioni come i percorsi delle rotte e i metodi HTTP associati. Dal terminale:
+
+```bash
+ Server listening to port: 3030
+[
+  {
+    path: '/api/users/test',
+    methods: [ 'GET' ],
+    middlewares: [ 'anonymous' ]
+  }
+]
+```
+
 # MongoDB Atlas
 
 - creazione di un'utenza
@@ -127,6 +158,31 @@ Come leggere MongoDB tramite Mongoose dentro la nostra applicazione scritta con 
     const newUser = new User(data); // crea un nuovo documento
     await newUser.save(); // salva il documento in modo persistente su DB
     ```
+
+## ALCUNI ESEMPI:
+
+- Nell'esempio sottostante ad una chiamata GET all'URL `...api/users/` il server (MongoDB) riponderà con un vettore (poichè uso la funzione map su un array di oggetti) contenente il nome di tutti gli utenti.
+
+```js
+import express from "express";
+import { User } from "../models/users.js";
+
+const userRouter = express.Router();
+userRouter.use(express.json());
+
+userRouter.get("/", async (req, res, next) => {
+  try {
+    const users = await User.find({}, "name"); //cerco in particolare il nome degli utenti
+    const name = users.map((user) => user.name);
+    res.json(name);
+  } catch (error) {
+    next(error);
+  }
+});
+
+export default userRouter;
+```
+
 - se voglio utilizare variabili d'ambiente è utile scaricare il pacchetto `dotenv` che andrà importato all'inizio del mio file principale nel seguente modo:
 
 ```js
@@ -134,4 +190,4 @@ import dotenv from "dotenv";
 dotenv.config();
 ```
 
-- una volta importato posso richiamare le variabili di ambiente dal file `.env` usando la scrittura `process.env.VAR_NAME`
+- una volta importato posso richiamare le variabili di ambiente dal file `.env` usando la scrittura `process.env.VAR_NAME`, dove `VAR_NAME` rappresenta il nome della variabile.
