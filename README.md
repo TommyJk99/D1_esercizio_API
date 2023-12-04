@@ -183,6 +183,31 @@ userRouter.get("/", async (req, res, next) => {
 export default userRouter;
 ```
 
+- In quest'altro esempio la route è configurata per rispondere a richieste GET su un percorso che include un parametro dinamico :id. Ad esempio, se l'URL è "/api/users/123", il valore di id sarà "123".
+
+```js
+userRouter.get("/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params; //rappresenta l'ultima parte
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      //questo serve ad evitare l'errore 500 per un id non consono
+      return res.status(400).json({ error: "Invalid ObjectId" });
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).send(); //se l'id è consono ma non esiste nel database: 404
+    }
+
+    res.json(user);
+  } catch (error) {
+    next(error);
+  }
+});
+```
+
 - se voglio utilizare variabili d'ambiente è utile scaricare il pacchetto `dotenv` che andrà importato all'inizio del mio file principale nel seguente modo:
 
 ```js
