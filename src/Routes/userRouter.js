@@ -1,9 +1,12 @@
 import express from "express";
 import { User } from "../models/users.js";
 import mongoose from "mongoose";
+import { checkAuth } from "../middlewares/checkAuth.js";
 
 const userRouter = express.Router();
+
 userRouter.use(express.json());
+userRouter.use(checkAuth);
 
 //ESEMPIO DI CHIAMTA GET A MONGODB TRAMITE MONGOOSE DENTRO LA NOSTRA APPLICAZIONE SCRITTA CON EXPRESS
 userRouter.get("/", async (req, res, next) => {

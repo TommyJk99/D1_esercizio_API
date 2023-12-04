@@ -1,6 +1,6 @@
 # Express
 
-Inizializziamo una repo vuota
+## Inizializziamo una repo vuota
 
 - creiamo una nuova cartella
 - lanciamo `npm init`
@@ -115,6 +115,39 @@ Così facendo a terminale si avrà la lista di tutte le rotte definite in Expres
   }
 ]
 ```
+
+## MIDDLEWARES
+
+In Express, un middleware è una funzione che ha accesso agli oggetti di richiesta (request), risposta (response), e successivo middleware nella catena delle richieste. Esso può eseguire operazioni su tali oggetti, modificare la richiesta e la risposta, o terminare la catena delle richieste. I middleware sono utilizzati per aggiungere funzionalità, gestire richieste e risposte, nonché per eseguire azioni specifiche durante il ciclo di vita di una richiesta HTTP. Esempio:
+
+```js
+//FILE checkAuth.js (dove definisco il middleware)
+import dotenv from "dotenv";
+dotenv.config();
+
+export const checkAuth = (req, res, next) => {
+  //per passare questo mdw devo avere tra gli header l'authorization
+  if (req.headers.authorization === process.env.PSSW) {
+    next(); //serve per passare al middleware successivo
+  } else {
+    res.status(401).json({ error: "password sbagliata" });
+  }
+};
+
+//FILE userRouter.js (dove applico il middleware)
+import express from "express";
+import { User } from "../models/users.js";
+import mongoose from "mongoose";
+import { checkAuth } from "../middlewares/checkAuth.js";
+
+const userRouter = express.Router();
+
+userRouter.use(express.json());
+userRouter.use(checkAuth);
+//tutte le richieste sotto questa riga dovranno avere nell'header l'Authorization
+```
+
+Il codice qui sopra definisce un middleware chiamato checkAuth che verifica se l'header "Authorization" nella richiesta contiene una password corrispondente a quella definita nel file di configurazione .env. Se tutto è apposto la funzione next() fa si che si passi al prossimo middleware, in caso contrario viene restituito 401 Unauthorized.
 
 # MongoDB Atlas
 
