@@ -208,6 +208,43 @@ userRouter.get("/:id", async (req, res, next) => {
 });
 ```
 
+- In questo esempio vado a creare un nuovo utente tramite una richiesta POST:
+
+```js
+userRouter.post("/", async (req, res, next) => {
+  try {
+    const newUser = new User(req.body);
+
+    await newUser.save();
+
+    res.status(201).json(newUser);
+  } catch (error) {
+    error.statusCode = 400;
+    next(error);
+  }
+});
+
+export default userRouter;
+```
+
+- In questo esempio elimino un utente:
+
+```js
+userRouter.delete("/:id", async (req, res, next) => {
+  try {
+    const deletedDocument = await User.findByIdAndDelete(req.params.id);
+
+    if (!deletedDocument) {
+      res.status(404).send();
+    } else {
+      res.status(204).send();
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+```
+
 - se voglio utilizare variabili d'ambiente è utile scaricare il pacchetto `dotenv` che andrà importato all'inizio del mio file principale nel seguente modo:
 
 ```js

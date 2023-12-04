@@ -3,6 +3,7 @@ import { User } from "../models/users.js";
 import mongoose from "mongoose";
 
 const userRouter = express.Router();
+userRouter.use(express.json());
 
 //ESEMPIO DI CHIAMTA GET A MONGODB TRAMITE MONGOOSE DENTRO LA NOSTRA APPLICAZIONE SCRITTA CON EXPRESS
 userRouter.get("/", async (req, res, next) => {
@@ -30,6 +31,44 @@ userRouter.get("/:id", async (req, res, next) => {
     }
 
     res.json(user);
+  } catch (error) {
+    next(error);
+  }
+});
+
+userRouter.post("/", async (req, res, next) => {
+  try {
+    const newUser = new User(req.body);
+
+    await newUser.save();
+
+    res.status(201).json(newUser);
+  } catch (error) {
+    error.statusCode = 400;
+    next(error);
+  }
+});
+
+userRouter.put("/:id", async (req, res, next) => {
+  try {
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    res.json(updatedUser);
+  } catch (error) {
+    next(error);
+  }
+});
+
+userRouter.delete("/:id", async (req, res, next) => {
+  try {
+    const deletedDocument = await User.findByIdAndDelete(req.params.id);
+
+    if (!deletedDocument) {
+      res.status(404).send();
+    } else {
+      res.status(204).send();
+    }
   } catch (error) {
     next(error);
   }
