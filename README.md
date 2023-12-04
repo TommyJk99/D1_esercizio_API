@@ -149,6 +149,14 @@ userRouter.use(checkAuth);
 
 Il codice qui sopra definisce un middleware chiamato checkAuth che verifica se l'header "Authorization" nella richiesta contiene una password corrispondente a quella definita nel file di configurazione .env. Se tutto è apposto la funzione next() fa si che si passi al prossimo middleware, in caso contrario viene restituito 401 Unauthorized.
 
+Interessante è il fatto che posso applicare il middleware (o più!) direttamente ad una richiesta specifica:
+
+```js
+userRouter.get("/", checkAuth, checkAuth2, checkAuth3 async (req, res, next) => {
+  //CODICE
+});
+```
+
 # MongoDB Atlas
 
 - creazione di un'utenza

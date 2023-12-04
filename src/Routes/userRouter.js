@@ -6,10 +6,9 @@ import { checkAuth } from "../middlewares/checkAuth.js";
 const userRouter = express.Router();
 
 userRouter.use(express.json());
-userRouter.use(checkAuth);
 
 //ESEMPIO DI CHIAMTA GET A MONGODB TRAMITE MONGOOSE DENTRO LA NOSTRA APPLICAZIONE SCRITTA CON EXPRESS
-userRouter.get("/", async (req, res, next) => {
+userRouter.get("/", checkAuth, async (req, res, next) => {
   try {
     const users = await User.find({}, "name");
     const name = users.map((user) => user.name);
@@ -19,7 +18,7 @@ userRouter.get("/", async (req, res, next) => {
   }
 });
 
-userRouter.get("/:id", async (req, res, next) => {
+userRouter.get("/:id", checkAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
 
