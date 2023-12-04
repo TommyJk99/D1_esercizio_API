@@ -179,7 +179,9 @@ userRouter.get("/", async (req, res, next) => {
     next(error);
   }
 });
-
+/*NB: async viene utilizzato perchè User.find() è una funzione asincrona
+next serve a far si che l'applicazione non si blocchi  in caso di errore
+*/
 export default userRouter;
 ```
 
@@ -227,6 +229,21 @@ userRouter.post("/", async (req, res, next) => {
 export default userRouter;
 ```
 
+- In questo esempio modifico gli attributi di un utente:
+
+```js
+userRouter.put("/:id", async (req, res, next) => {
+  try {
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    res.json(updatedUser);
+  } catch (error) {
+    next(error);
+  }
+});
+```
+
 - In questo esempio elimino un utente:
 
 ```js
@@ -245,6 +262,42 @@ userRouter.delete("/:id", async (req, res, next) => {
 });
 ```
 
+- questo codice definisce uno <b>schema Mongoose</b> per un modello chiamato Author, che rappresenta gli autori in un'applicazione. Gli autori sono rappresentati come documenti in una collezione chiamata "authors", e ogni autore ha campi come name, lastname, age, email, birthday, e avatar. Il modello Mongoose Author fornisce un'interfaccia per effettuare operazioni CRUD (Create, Read, Update, Delete) sulla collezione di autori nel database MongoDB:
+
+```js
+import mongoose, { Schema } from "mongoose";
+
+const AuthorSchema = new Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  lastname: {
+    type: String,
+    required: true,
+  },
+  age: {
+    type: Number,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+  },
+  birthday: {
+    type: String,
+    required: true,
+  },
+  avatar: {
+    type: String,
+    required: true,
+  },
+});
+
+export const Author = mongoose.model("authors", AuthorSchema);
+// La stringa "authors" è il nome della collezione nel DB!!
+```
+
 - se voglio utilizare variabili d'ambiente è utile scaricare il pacchetto `dotenv` che andrà importato all'inizio del mio file principale nel seguente modo:
 
 ```js
@@ -253,3 +306,19 @@ dotenv.config();
 ```
 
 - una volta importato posso richiamare le variabili di ambiente dal file `.env` usando la scrittura `process.env.VAR_NAME`, dove `VAR_NAME` rappresenta il nome della variabile.
+
+# ALTRO
+
+## Risposte del server
+
+- `200 OK` ➡️ la richiesta è stata eseguita con successo.
+- `201 Created` ➡️ la richiesta è stata eseguita con successo, e una nuova risorsa è stato creato come risultato.
+- `204 No Content` ➡️ la richiesta è stata eseguita con successo, ma non c'è contenuto da restituire.
+- `400 Bad Request` ➡️ la richiesta è errata o malformata. Il server non può comprendere o processare la richiesta.
+- `401 Unauthorized` ➡️ il client deve autenticarsi per ottenere la risorsa richiesta. L'autenticazione non è riuscita o mancante.
+- `403 Forbidden` ➡️ il server ha capito la richiesta, ma rifiuta di eseguirla. Il client non ha i diritti d'accesso necessari.
+- `404 Not Found` ➡️ la risorsa richiesta non è stata trovata sul server.
+- `500 Internal Server Error` ➡️ si è verificato un errore interno del server, e la richiesta non può essere completata.
+- `502 Bad Gateway` ➡️ il server, mentre funzionante come gateway o proxy, ha ricevuto una risposta non valida dal server upstream.
+- `503 Service Unavailable` ➡️ il server non è disponibile al momento. Solitamente temporaneo, il server può essere sovraccarico o in manutenzione.
+- `504 Gateway Timeout` ➡️ il server, mentre funzionante come gateway o proxy, non ha ricevuto una risposta tempestiva dal server upstream.
