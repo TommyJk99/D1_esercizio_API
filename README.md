@@ -324,6 +324,8 @@ Come leggere MongoDB tramite Mongoose dentro la nostra applicazione scritta con 
 
 ## ALCUNI ESEMPI:
 
+### Esempio chiamate GET (ricerca con find)
+
 - Nell'esempio sottostante ad una chiamata GET all'URL `...api/users/` il server (MongoDB) riponderà con un array (poichè uso la funzione map su un array di oggetti) contenente il nome di tutti gli utenti.
 
 ```js
@@ -347,6 +349,8 @@ next serve a far si che l'applicazione non si blocchi  in caso di errore
 */
 export default userRouter;
 ```
+
+### Esempio chiamata GET (ricerca per id)
 
 - In quest'altro esempio la route è configurata per rispondere a richieste GET su un percorso che include un parametro dinamico :id. Ad esempio, se l'URL è "/api/users/123", il valore di id sarà "123".
 
@@ -373,6 +377,8 @@ userRouter.get("/:id", async (req, res, next) => {
 });
 ```
 
+### Esempio chiamata POST
+
 - In questo esempio vado a creare un nuovo utente tramite una richiesta POST:
 
 ```js
@@ -392,6 +398,8 @@ userRouter.post("/", async (req, res, next) => {
 export default userRouter;
 ```
 
+### Esempio chiamata PUT
+
 - In questo esempio modifico gli attributi di un utente:
 
 ```js
@@ -406,6 +414,8 @@ userRouter.put("/:id", async (req, res, next) => {
   }
 });
 ```
+
+### Esempio chiamata DELETE
 
 - In questo esempio elimino un utente:
 
@@ -424,6 +434,8 @@ userRouter.delete("/:id", async (req, res, next) => {
   }
 });
 ```
+
+## Schemi e modelli
 
 - questo codice definisce uno <b>schema Mongoose</b> per un modello chiamato Author, che rappresenta gli autori in un'applicazione. Gli autori sono rappresentati come documenti in una collezione chiamata "authors", e ogni autore ha campi come name, lastname, age, email, birthday, e avatar. Il modello Mongoose Author fornisce un'interfaccia per effettuare operazioni CRUD (Create, Read, Update, Delete) sulla collezione di autori nel database MongoDB:
 
@@ -460,6 +472,10 @@ const AuthorSchema = new Schema({
 export const Author = mongoose.model("authors", AuthorSchema);
 // La stringa "authors" è il nome della collezione nel DB!!
 ```
+
+- In sintesi, lo schema definisce la struttura dei dati, mentre il modello fornisce metodi per interagire con i dati nel database in modo specifico per quella struttura.
+
+## Utilizzo variabili d'ambiente
 
 - se voglio utilizare variabili d'ambiente è utile scaricare il pacchetto `dotenv` che andrà importato all'inizio del mio file principale nel seguente modo:
 
