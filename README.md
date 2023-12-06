@@ -239,6 +239,46 @@ export const genericError = (err, req, res, next) => {
 
 - La seconda porzione di codice non attribuisce un valore ad `error.statusCode`, il quale di fatto rimarrà undefinded. Come nel caso precedende l'errore viene comunque inoltrato al primo middleware di gestione di errori. Tuttavia dato che lo statusCode non è definito, verrà restituito il codice di errore generico 500.
 
+### Middleware di errore più complesso con spunti interessanti
+
+```js
+// File: errorMiddleware.js
+export const errorMiddleware = (err, req, res, next) => {
+  let statusCode = err.statusCode || 500;
+  let message = err.message || "Errore interno del server😒";
+
+  if (err.name === "ValidationError") {
+    // Gestione degli errori di validazione del modello Mongoose
+    statusCode = 400;
+    message = "Errore di validazione";
+  }
+
+  if (err.name === "UnauthorizedError") {
+    // Gestione degli errori di autenticazione JWT
+    statusCode = 401;
+    message = "Non autorizzato";
+  }
+
+  if (err.name === "CustomError") {
+    // Gestione di un errore personalizzato con un codice di stato specifico
+    statusCode = err.statusCode || 500;
+    message = err.message || "Errore personalizzato";
+  }
+
+  // Log dell'errore (puoi implementare il tuo sistema di logging)
+  console.error(err);
+
+  // Risposta al client con il codice di stato e il messaggio appropriati
+  res.status(statusCode).json({ error: message });
+};
+```
+
+- In questo esempio il middleware accetta un errore (err) insieme a req, res, e next.
+- Imposta un codice di stato e un messaggio predefiniti, ma li modifica se l'errore specifico ha informazioni più dettagliate.
+- Gestisce errori specifici come quelli di validazione Mongoose, errori di autenticazione JWT e un errore personalizzato chiamato 'CustomError'.
+- Logga l'errore per eventuali azioni di troubleshooting o logging personalizzate.
+- Invia una risposta JSON al client con il codice di stato e il messaggio appropriati.
+
 # MongoDB Atlas
 
 - creazione di un'utenza
