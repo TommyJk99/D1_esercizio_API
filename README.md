@@ -23,7 +23,7 @@ server.listen(port, () => {
 });
 ```
 
-COSE UTILI PER IL ROUTING:
+## COSE UTILI PER IL ROUTING:
 
 Questo comando analizza automaticamente i corpi delle richieste in arrivo nel formato JSON:
 
@@ -118,7 +118,9 @@ Così facendo a terminale si avrà la lista di tutte le rotte definite in Expres
 
 ## MIDDLEWARES
 
-In Express, un middleware è una funzione che ha accesso agli oggetti di richiesta (request), risposta (response), e successivo middleware nella catena delle richieste. Esso può eseguire operazioni su tali oggetti, modificare la richiesta e la risposta, o terminare la catena delle richieste. I middleware sono utilizzati per aggiungere funzionalità, gestire richieste e risposte, nonché per eseguire azioni specifiche durante il ciclo di vita di una richiesta HTTP. Esempio:
+In Express, un middleware è una funzione che ha accesso agli oggetti di richiesta (request), risposta (response), e successivo middleware nella catena delle richieste. Esso può eseguire operazioni su tali oggetti, modificare la richiesta e la risposta, o terminare la catena delle richieste. I middleware sono utilizzati per aggiungere funzionalità, gestire richieste e risposte, nonché per eseguire azioni specifiche durante il ciclo di vita di una richiesta HTTP.
+
+### Esempio middleware di autenticazione:
 
 ```js
 //FILE checkAuth.js (dove definisco il middleware)
@@ -147,15 +149,95 @@ userRouter.use(checkAuth);
 //tutte le richieste sotto questa riga dovranno avere nell'header l'Authorization
 ```
 
-Il codice qui sopra definisce un middleware chiamato checkAuth che verifica se l'header "Authorization" nella richiesta contiene una password corrispondente a quella definita nel file di configurazione .env. Se tutto è apposto la funzione next() fa si che si passi al prossimo middleware, in caso contrario viene restituito 401 Unauthorized.
+Il codice qui sopra definisce un MIDDLEWARE DI AUTENTICAZIONE chiamato checkAuth che verifica se l'header "Authorization" nella richiesta contiene una password corrispondente a quella definita nel file di configurazione .env. Se tutto è apposto la funzione next() fa si che si passi al prossimo middleware, in caso contrario viene restituito 401 Unauthorized.
 
-Interessante è il fatto che posso applicare il middleware (o più!) direttamente ad una richiesta specifica:
+Interessante è il fatto che posso applicare il middleware (o più!) direttamente ad una richiesta specifica oltre che ad un'intera ruote:
 
 ```js
 userRouter.get("/", checkAuth, checkAuth2, checkAuth3 async (req, res, next) => {
   //CODICE
 });
 ```
+
+### Esempio middleware di errore:
+
+```js
+//FILE genericError.js
+export const genericError = (err, req, res, next) => {
+  console.log(err);
+
+  res.status(err.statusCode || 500).send(err.message);
+};
+
+//FILE index.js
+import express from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import list from "express-list-endpoints";
+import apiRouter from "./Routes/apiRouter.js";
+import { genericError } from "./middlewares/genericError.js";
+
+dotenv.config();
+
+const server = express();
+const port = 3030;
+
+server.use("/api", apiRouter);
+server.use(genericError);
+```
+
+Il middleware di errore genericError.js è una funzione che gestisce gli errori durante l'esecuzione dell'applicazione Express. Riceve quattro parametri: err (l'errore), req (la richiesta), res (la risposta), e next (funzione per passare al middleware successivo).
+
+La funzione logga l'errore sulla console, imposta lo stato della risposta in base al codice di stato dell'errore o a 500, e invia il messaggio di errore come risposta.
+
+Nel file principale index.js, il middleware di errore è applicato con server.use(genericError);. Questo assicura che gestisca gli errori in tutta l'applicazione, intervenendo se nessun altro middleware o route li gestisce precedentemente.
+
+Quando si verifica un errore in un middleware o in una route di Express, può essere passato al successivo utilizzando `next(errore)`. `Express cerca automaticamente il primo middleware con quattro parametri` (errore, richiesta, risposta, prossimo) e lo esegue, fungendo da gestore globale di errori. È importante posizionare questo middleware alla fine della catena dei middleware per garantire una gestione uniforme degli errori in tutta l'applicazione.
+
+È una pratica comune avere una catena di middleware prima del middleware di errore per eseguire operazioni specifiche della richiesta, e il middleware di errore viene utilizzato per gestire errori imprevisti durante queste operazioni
+
+### Try and catch e next(error)
+
+#### Qual è la differenza tra queste due porzioni di codice?
+
+```js
+// Esempio userRouter.post
+userRouter.post("/", async (req, res, next) => {
+  try {
+    const newUser = new User(req.body);
+    await newUser.save();
+    res.status(201).json(newUser);
+  } catch (error) {
+    error.statusCode = 400;
+    next(error);
+  }
+});
+
+// Esempio userRouter.put
+userRouter.put("/:id", async (req, res, next) => {
+  try {
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(updatedUser);
+  } catch (error) {
+    next(error);
+  }
+});
+```
+
+- Prima di rispondere supponiamo che il gestore di errori sia il seguente:
+
+```js
+//GESTORE DI ERRORI
+export const genericError = (err, req, res, next) => {
+  console.log(err);
+
+  res.status(err.statusCode || 500).send(err.message);
+};
+```
+
+- La prima porzione di codice, in caso di errore, imposta `error.statusCode = 400`. Successivamente grazie alla chiamata di next(err), l'errore viene passato al primo middleware di gestione di errore che trova (ovvero il primo ad avare quattro parametri). Dato che `error.statusCode` è stato settato, il gestore di errori restituirà lo stato 400. Ricordo che la riga `err.statusCode || 500` restituisce il valore di `err.statusCode` se tale valore è truthy (diverso da zero, null, undefined, false, o una stringa vuota), altrimenti restituisce 500.
+
+- La seconda porzione di codice non attribuisce un valore ad `error.statusCode`, il quale di fatto rimarrà undefinded. Come nel caso precedende l'errore viene comunque inoltrato al primo middleware di gestione di errori. Tuttavia dato che lo statusCode non è definito, verrà restituito il codice di errore generico 500.
 
 # MongoDB Atlas
 
