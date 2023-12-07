@@ -40,12 +40,20 @@ productsRouter
   })
   .put("/:id", async (req, res, next) => {
     try {
-      const updateProduct = Product.findByIdAndUpdate(req.params.id, req.body, {
+      const updateProduct = await Product.findByIdAndUpdate(req.params.id, req.body, {
         new: true,
       });
       res.json(updateProduct);
     } catch (err) {
       next(err);
+    }
+  })
+  .delete("/:id", async (req, res, next) => {
+    try {
+      const deletedDocument = await Product.findByIdAndDelete(req.params.id);
+      res.status(!deletedDocument ? 404 : 204).send();
+    } catch (error) {
+      next(error);
     }
   });
 
