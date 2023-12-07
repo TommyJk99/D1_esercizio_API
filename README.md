@@ -279,6 +279,26 @@ export const errorMiddleware = (err, req, res, next) => {
 - Logga l'errore per eventuali azioni di troubleshooting o logging personalizzate.
 - Invia una risposta JSON al client con il codice di stato e il messaggio appropriati.
 
+## Pagination
+
+### Limit e skip
+
+Per ottimizzare le richieste o per scopi di struttura, è possibile includere specifiche query nell'URL per cercare solo determinati prodotti e iniziare dalla posizione desiderata nel database. Ad esempio, con l'URL `http://localhost:3030/api/products/?limit=10&skip=2`, una richiesta GET restituirà dieci prodotti a partire dal terzo elemento nel database. Nel codice Express fornito, le variabili limit e skip vengono estratte dalla query dell'URL e utilizzate per limitare il numero di risultati restituiti e specificare da quale punto iniziare nella raccolta di dati.
+
+```js
+.get("/", async (req, res, next) => {
+    try {
+      const { limit, skip } = req.query;
+      const products = await Product.find({}).limit(limit).skip(skip); //restituisce solo 2 elementi!
+      res.json(products);
+    } catch (err) {
+      next(err);
+    }
+  })
+```
+
+### Sort
+
 # MongoDB Atlas
 
 - creazione di un'utenza

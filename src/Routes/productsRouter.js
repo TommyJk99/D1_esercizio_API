@@ -7,10 +7,10 @@ productsRouter.use(express.json());
 //sintassi alternativa di router.get(...)
 //è possibile concatenare .post a .get perché get resistuisce un'istanza di products Router
 productsRouter
-
   .get("/", async (req, res, next) => {
     try {
-      const products = await Product.find({});
+      const { limit, skip } = req.query;
+      const products = await Product.find({}).limit(limit).skip(skip); //restituisce solo 2 elementi!
       res.json(products);
     } catch (err) {
       next(err);
