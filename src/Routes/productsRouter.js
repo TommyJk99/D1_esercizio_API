@@ -9,8 +9,11 @@ productsRouter.use(express.json());
 productsRouter
   .get("/", async (req, res, next) => {
     try {
-      const { limit, skip } = req.query;
-      const products = await Product.find({}).limit(limit).skip(skip); //restituisce solo 2 elementi!
+      const { limit, skip, sortBy, order } = req.query;
+      const products = await Product.find({})
+        .limit(limit)
+        .skip(skip)
+        .sort({ [sortBy]: order }); //restituisce solo 2 elementi!
       res.json(products);
     } catch (err) {
       next(err);

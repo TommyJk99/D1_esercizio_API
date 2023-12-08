@@ -286,10 +286,15 @@ export const errorMiddleware = (err, req, res, next) => {
 Per ottimizzare le richieste o per scopi di struttura, è possibile includere specifiche query nell'URL per cercare solo determinati prodotti e iniziare dalla posizione desiderata nel database. Ad esempio, con l'URL `http://localhost:3030/api/products/?limit=10&skip=2`, una richiesta GET restituirà dieci prodotti a partire dal terzo elemento nel database. Nel codice Express fornito, le variabili limit e skip vengono estratte dalla query dell'URL e utilizzate per limitare il numero di risultati restituiti e specificare da quale punto iniziare nella raccolta di dati.
 
 ```js
+//Esempio sort, limit, skip
 .get("/", async (req, res, next) => {
     try {
       const { limit, skip } = req.query;
-      const products = await Product.find({}).limit(limit).skip(skip); //restituisce solo 2 elementi!
+      const products = await Product.find({})
+      .sort({price: "ascending"});
+      .limit(limit)
+      .skip(skip)
+      //restituisce 10 elementi a partire dal terzo, ordinati per prezzo crescente
       res.json(products);
     } catch (err) {
       next(err);
@@ -299,6 +304,30 @@ Per ottimizzare le richieste o per scopi di struttura, è possibile includere sp
 
 ### Sort
 
+Utilizzando l'URL `http://localhost:3030/api/products/?limit=10&skip=2`, la richiesta otterrà 10 oggetti dal database, ordinati dal prezzo più basso al più alto. È importante notare che <u>l'ordinamento non si applica solo ai primi 10 elementi del database, ma coinvolge l'intero set di dati</u> corrispondente alla query. In altre parole, il database esegue prima l'ordinamento completo e successivamente restituisce i 10 elementi richiesti, a partire dal terzo oggetto in base all'ordinamento effettuato.
+
+### Esempio con ricerca per chiave generica
+
+```js
+//Altro esempio sort, limit, skip con chiave dinamica
+.get("/", async (req, res, next) => {
+    try {
+      const { limit, skip, sortBy, order } = req.query;
+      const products = await Product.find({})
+      .sort({[sortBy]: order});
+      .limit(limit)
+      .skip(skip)
+      //le parentesi quadre indicano che sortBy è una chiave dinamica!
+      //restituisce 10 elementi a partire dal terzo, ordinati per prezzo crescente
+      res.json(products);
+    } catch (err) {
+      next(err);
+    }
+  })
+```
+
+Questo codice utilizza i parametri `sortBy` e `order` dalla query per consentire un ordinamento flessibile dei risultati di ricerca. Ad esempio, è possibile ordinare i prodotti per prezzo, nome o qualsiasi altro campo specificato dinamicamente. Nel codice precedente invece, l'ordinamento è fisso sul campo "price" in ordine crescente, senza la possibilità di variare il campo di ordinamento o l'ordine risultante. Un ipotetico URL per sfruttare appieno il codice può essere: `http://localhost:3030/api/products/?limit=10&sortBy=price&order=ascending`
+
 # MongoDB Atlas
 
 - creazione di un'utenza
@@ -306,6 +335,116 @@ Per ottimizzare le richieste o per scopi di struttura, è possibile includere sp
 - creazione di un DB
 - creazione di una o piu collezioni
 - creazione di multipli documenti
+
+## Queries
+
+Le queries in MongoDB sono come istruzioni specializzate che usiamo per comunicare con il database. Attraverso queste istruzioni, possiamo eseguire operazioni di lettura, scrittura e manipolazione dei dati. Le queries ci permettono di cercare informazioni specifiche, aggiornare o inserire nuovi dati nel database secondo criteri definiti. Inoltre, offrono opzioni per ordinare i risultati, limitare la quantità di dati restituiti e proiettare solo le informazioni necessarie.
+
+## Esempi queries:
+
+### 1. Lettura di tutti i documenti
+
+```js
+db.collection("nomi").find({});
+```
+
+### 2. Filtraggio in base ad un criterio ($gt greater than)
+
+```js
+db.collection("prodotti").find({ prezzo: { $gt: 100 } });
+```
+
+### 3. Visualizzare solo alcuni campi (chiave valore)
+
+```js
+db.collection("utenti").find({}, { nome: 1, email: 1 });
+```
+
+### 4. Ordinamento dei risultati per un campo specifico:
+
+```js
+db.collection("libri").find().sort({ titolo: 1 });
+```
+
+### 5. Limitazione del numero di risultati restituiti:
+
+```js
+db.collection("film").find().limit(5);
+```
+
+### 6. Inserimento di un nuovo documento:
+
+```js
+db.collection("utenti").insertOne({ nome: "Mario", età: 25, email: "mario@example.com" });
+```
+
+### 7. Aggiornamento di un documento esistente
+
+```js
+db.collection("prodotti").updateOne({ nome: "Prodotto1" }, { $set: { prezzo: 150 } });
+```
+
+### 8. Eliminazione di documenti in base a un criterio:
+
+```js
+db.collection("messaggi").deleteMany({ letto: true });
+```
+
+### 9. Lettura di documenti con un operatore logico
+
+```js
+db.collection("ordini").find({
+  $and: [{ stato: "in attesa" }, { totale: { $gt: 1000 } }],
+});
+```
+
+### 10. Utilizzo di operatori di confronto multipli
+
+```js
+db.collection("studenti").find({
+  $or: [{ età: { $lt: 18 } }, { voti: { $gt: 90 } }],
+});
+```
+
+## Utilizzo su mongoDB Compass
+
+All'interno di mongoDB Compass le queries si scriveranno in questo modo:
+
+```js
+//restituisce gli oggetti con prezzo maggiore o uguale di 100
+{
+  price: {
+    $gte: 100; //il punto e virgola non serve me lo formatta in automatico Prettier
+  }
+}
+```
+
+```js
+//restituisce gli oggetti con prezzo minore di 200 e quelli con prezzo maggiore di 1200
+{
+  $or: [{ price: { $lt: 200 } }, { price: { $gt: 1200 } }];
+}
+```
+
+## Lista dei possibili Query Selectors ()
+
+`Seq` 👉 Matches values that are equal to a specified value.
+
+`Sgt` 👉 Matches values that are greater than a specified value.
+
+`Sgte` 👉 Matches values that are greater than or equal to a specified value.
+
+`Sin` 👉 Matches any of the values specified in an array.
+
+`$lt` 👉 Matches values that are less than a specified value.
+
+`§lte` 👉 Matches values that are less than or equal to a specified value.
+
+`Sne` 👉 Matches all values that are not equal to a specified value.
+
+`Snin` 👉 Matches none of the values specified in on array.
+
+Questi sono solo alcuni dei possibili Query selectors. La lista completa si può trovare al seguente link: <link>https://www.mongodb.com/docs/manual/reference/operator/query/</link>
 
 # Mongoose
 
