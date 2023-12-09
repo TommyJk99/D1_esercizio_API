@@ -1,3 +1,21 @@
+# Indice
+
+- [Express](#express)
+  - [Inizializzazione](#middleware-di-errore-più-complesso-con-spunti-interessanti)
+  - [Routing](#cose-utili-per-il-routing)
+  - [Tenere traccia delle rotte](#tenere-traccia-delle-rotte)
+  - [Middlewares](#middlewares)
+  - [Pagination](#pagination)
+- [MongoDB Atlas](#mongodb-atlas)
+  - [Queries](#queries)
+  - [Queries su MDB Compass](#utilizzo-queries-su-mongodb-compass)
+  - [Selettori](#lista-dei-possibili-query-selectors)
+- [Mongoose (con Express)](#mongoose-con-express)
+  - [Esempi CRUD](#esempi-crud)
+  - [Schemi e modelli](#schemi-e-modelli)
+  - [Variabili d'ambiente](#utilizzo-variabili-dambiente)
+- [Altro](#altro)
+
 # Express
 
 ## Inizializziamo una repo vuota
@@ -340,7 +358,7 @@ Questo codice utilizza i parametri `sortBy` e `order` dalla query per consentire
 
 Le queries in MongoDB sono come istruzioni specializzate che usiamo per comunicare con il database. Attraverso queste istruzioni, possiamo eseguire operazioni di lettura, scrittura e manipolazione dei dati. Le queries ci permettono di cercare informazioni specifiche, aggiornare o inserire nuovi dati nel database secondo criteri definiti. Inoltre, offrono opzioni per ordinare i risultati, limitare la quantità di dati restituiti e proiettare solo le informazioni necessarie.
 
-## Esempi queries:
+### Esempi queries:
 
 ### 1. Lettura di tutti i documenti
 
@@ -406,27 +424,29 @@ db.collection("studenti").find({
 });
 ```
 
-## Utilizzo su mongoDB Compass
+## Utilizzo queries su mongoDB Compass
 
 All'interno di mongoDB Compass le queries si scriveranno in questo modo:
 
-```js
+```cpp
+{ price: { $gte: 100 }}
+
 //restituisce gli oggetti con prezzo maggiore o uguale di 100
-{
-  price: {
-    $gte: 100; //il punto e virgola non serve me lo formatta in automatico Prettier
-  }
-}
 ```
 
-```js
-//restituisce gli oggetti con prezzo minore di 200 e quelli con prezzo maggiore di 1200
-{
-  $or: [{ price: { $lt: 200 } }, { price: { $gt: 1200 } }];
-}
+```cpp
+{ $or: [{ price: { $lt: 200 } }, { number: { $gt: 1200 } }] }
+
+//restituisce gli oggetti con 'price' minore di 200 e quelli con 'number' maggiore di 1200
 ```
 
-## Lista dei possibili Query Selectors ()
+```cpp
+{ $and: [{ price: { $gte: 100 } }, { price: { $lte: 200 } }] }
+
+//restituisce i prodotti con 'price' compreso tra 100 e 200 (con estremi compresi)
+```
+
+## Lista dei possibili Query Selectors
 
 `Seq` 👉 Matches values that are equal to a specified value.
 
@@ -446,7 +466,7 @@ All'interno di mongoDB Compass le queries si scriveranno in questo modo:
 
 Questi sono solo alcuni dei possibili Query selectors. La lista completa si può trovare al seguente link: <link>https://www.mongodb.com/docs/manual/reference/operator/query/</link>
 
-# Mongoose
+# Mongoose (con Express)
 
 Come leggere MongoDB tramite Mongoose dentro la nostra applicazione scritta con Express?
 
@@ -481,7 +501,7 @@ Come leggere MongoDB tramite Mongoose dentro la nostra applicazione scritta con 
     await newUser.save(); // salva il documento in modo persistente su DB
     ```
 
-## ALCUNI ESEMPI:
+## Esempi CRUD:
 
 ### Esempio chiamate GET (ricerca con find)
 
@@ -511,7 +531,7 @@ export default userRouter;
 
 ### Esempio chiamata GET (ricerca per id)
 
-- In quest'altro esempio la route è configurata per rispondere a richieste GET su un percorso che include un parametro dinamico :id. Ad esempio, se l'URL è "/api/users/123", il valore di id sarà "123".
+- In quest'altro esempio la route è configurata per rispondere a richieste GET su un percorso che include un parametro dinamico `:id`. Ad esempio, se l'URL è `"/api/users/123"`, il valore di id sarà "123".
 
 ```js
 userRouter.get("/:id", async (req, res, next) => {
