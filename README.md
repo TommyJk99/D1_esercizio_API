@@ -11,6 +11,7 @@
   - [Queries su MDB Compass](#utilizzo-queries-su-mongodb-compass)
   - [Selettori](#lista-dei-possibili-query-selectors)
 - [Mongoose (con Express)](#mongoose-con-express)
+  - [index.js](#collegarsi-al-db-tramite-mongoose-indexjs)
   - [Esempi CRUD](#esempi-crud)
   - [Schemi e modelli](#schemi-e-modelli)
   - [Variabili d'ambiente](#utilizzo-variabili-dambiente)
@@ -447,6 +448,12 @@ All'interno di mongoDB Compass le queries si scriveranno in questo modo:
 //restituisce i prodotti con 'price' compreso tra 100 e 200 (con estremi compresi)
 ```
 
+```cpp
+{ $and: [{ eyeColor: { $ne: "green" }}, {eyeColor: { $ne: "blue" } }] }
+
+//restituisce gli eyeColor con colori diversi da 'green' e 'blue'
+```
+
 ## Esempi di utilizzo delle queries con Mongoose
 
 ### Esempio 1 (cerco oggetti nel DB in un range di prezzo)
@@ -706,6 +713,39 @@ Come leggere MongoDB tramite Mongoose dentro la nostra applicazione scritta con 
     const newUser = new User(data); // crea un nuovo documento
     await newUser.save(); // salva il documento in modo persistente su DB
     ```
+
+## Collegarsi al DB tramite mongoose (index.js)
+
+Questa è una possibile configurazione con la quale tramite mongoose mi connetto al DB:
+
+```js
+import express from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import list from "express-list-endpoints";
+import apiRouter from "./routers/apiRouter.js";
+import { genericError } from "./middlewares/genericError.js";
+
+dotenv.config();
+
+const server = express();
+const port = 3030;
+
+server.use("/api", apiRouter);
+server.use(genericError);
+
+mongoose
+  .connect(process.env.MONGO_URL)
+  .then(() => {
+    server.listen(port, () => {
+      console.log("😎 Listening at port:", port);
+      console.log(list(server));
+    });
+  })
+  .catch(() => {
+    console.log("Errore nella connessione al DB");
+  });
+```
 
 ## Esempi CRUD:
 
