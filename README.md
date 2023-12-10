@@ -330,18 +330,19 @@ Utilizzando l'URL `http://localhost:3030/api/products/?limit=10&skip=2`, la rich
 //Altro esempio sort, limit, skip con chiave dinamica
 .get("/", async (req, res, next) => {
     try {
-      const { limit, skip, sortBy, order } = req.query;
-      const products = await Product.find({})
-      .sort({[sortBy]: order});
-      .limit(limit)
-      .skip(skip)
-      //le parentesi quadre indicano che sortBy è una chiave dinamica!
-      //restituisce 10 elementi a partire dal terzo, ordinati per prezzo crescente
-      res.json(products);
+        const { limit, skip, sortBy, order } = req.query;
+        const products = await Product.find({})
+            .sort({ [sortBy]: order })
+            .limit(limit)
+            .skip(skip);
+        // Le parentesi quadre indicano che sortBy è una chiave dinamica!
+        // Restituisce un numero specifico di elementi a partire da una posizione specifica, ordinati in base alle specifiche richieste.
+        res.json(products);
     } catch (err) {
-      next(err);
+        next(err);
     }
-  })
+});
+
 ```
 
 Questo codice utilizza i parametri `sortBy` e `order` dalla query per consentire un ordinamento flessibile dei risultati di ricerca. Ad esempio, è possibile ordinare i prodotti per prezzo, nome o qualsiasi altro campo specificato dinamicamente. Nel codice precedente invece, l'ordinamento è fisso sul campo "price" in ordine crescente, senza la possibilità di variare il campo di ordinamento o l'ordine risultante. Un ipotetico URL per sfruttare appieno il codice può essere: `http://localhost:3030/api/products/?limit=10&sortBy=price&order=ascending`
@@ -445,6 +446,211 @@ All'interno di mongoDB Compass le queries si scriveranno in questo modo:
 
 //restituisce i prodotti con 'price' compreso tra 100 e 200 (con estremi compresi)
 ```
+
+## Esempi di utilizzo delle queries con Mongoose
+
+### Esempio 1 (cerco oggetti nel DB in un range di prezzo)
+
+```js
+productsRouter.get("/", async (req, res, next) => {
+  try {
+    const { limit, skip, sortBy, order } = req.query;
+    const products = await Product.find({
+      $and: [{ price: { $gte: 100 } }, { price: { $lte: 600 } }],
+    })
+      // .select("name - id") -> metodo  utilizzato per specificare i campi di un documento che voglio inclusi o esclusi (preceduti da -) dalla query risultante.
+      .sort({ [sortBy]: order })
+      .limit(limit)
+      .skip(skip);
+    res.json(products);
+  } catch (err) {
+    next(err);
+  }
+});
+```
+
+Ipotiziamo che l'URL abbia questa forma: <br>`http://localhost:3030/api/products?limit=10&skip=0&sortBy=price&order=ascending`
+
+Questo frammento di codice rappresenta una route per gestire richieste HTTP GET all'endpoint "/api/products/". Estrae i parametri di query, come limit, skip, sortBy e order. Effettua una query al database per recuperare i prodotti con prezzi compresi tra 100 e 600, ordinati (per 'price' crescente) e limitati secondo i parametri forniti (limit = 10 e skip = 0). La risposta è inviata come JSON al client. In particolare:
+
+1. per prima cosa vengono recuperati i parametri di query dalla richiesta ( limit, skip, sortBy e order)
+2. poi mongoose interroga il database il quale viene ordinato per prezzo crescente (ascending)
+3. successivamente (sempre grazie a mongoose) vengono selezionati i primi 10 elementi con prezzo compreso tra 100 e 600.
+4. vengono inviate le risposte al client in formato JSON
+
+### Una versione più curata e complessa dell'esempio 1
+
+Ci sono alcuni punti che si possono ottimizzare per migliorare la flessibilità e la robustezza del codice:
+
+1. <b>Validazione dei Parametri di Query</b>: è importante validare parametri di query per evitare errori o potenziali problemi di sicurezza (come injection attacks).
+
+2. <b>Gestione Predefinita dei Parametri</b>: se limit, skip, sortBy, o order non sono forniti, potresti voler impostare dei valori predefiniti.
+
+3. <b>Conversione dei Tipi di Dati</b>: Assicurati che i parametri come limit e skip siano convertiti nei tipi di dati appropriati (ad esempio, numeri).
+
+4. <b>Flessibilità nel Filtro dei Prezzi</b>: Potresti voler rendere i filtri sui prezzi opzionali o configurabili attraverso la query.
+
+Consideriamo il seguente URL per fare la richiestra get: <br>
+`http://localhost:3030/api/products?minPrice=100&maxPrice=500&limit=5&skip=0&sortBy=price&order=asc`
+
+```js
+productsRouter.get("/", async (req, res, next) => {
+  try {
+    // Estrai i parametri di query e imposta i valori predefiniti
+    let { limit = 10, skip = 0, sortBy = "createdAt", order = "asc" } = req.query;
+
+    // Converti limit e skip in numeri e verifica che siano positivi
+    limit = Math.max(parseInt(limit, 10), 1); // Imposta un limite minimo di 1
+    skip = Math.max(parseInt(skip, 10), 0); // Evita valori negativi per skip
+
+    // Verifica che sortBy e order siano valori accettabili
+    const allowedSortFields = ["createdAt", "price"]; // Aggiungi qui eventuali altri campi consentiti
+    const allowedOrders = ["asc", "desc"];
+    if (!allowedSortFields.includes(sortBy)) sortBy = "createdAt";
+    if (!allowedOrders.includes(order)) order = "asc";
+
+    // Opzioni di filtro per il prezzo
+    const priceFilter = {};
+    if (req.query.minPrice) priceFilter.price = { ...priceFilter.price, $gte: parseInt(req.query.minPrice, 10) };
+    if (req.query.maxPrice) priceFilter.price = { ...priceFilter.price, $lte: parseInt(req.query.maxPrice, 10) };
+
+    // Costruisci e esegui la query
+    const query = Product.find(priceFilter)
+      .sort({ [sortBy]: order })
+      .limit(limit)
+      .skip(skip);
+
+    const products = await query;
+
+    // Invia la risposta
+    res.json(products);
+  } catch (err) {
+    // Gestione degli errori
+    next(err);
+  }
+});
+//della serie: se voglio complicarmi la vita posso benissimo riuscirci
+```
+
+### Altre divagazioni sull'esempio 1
+
+```js
+const priceFilter = {};
+if (req.query.minPrice) priceFilter.price = { ...priceFilter.price, $gte: parseInt(req.query.minPrice, 10) };
+if (req.query.maxPrice) priceFilter.price = { ...priceFilter.price, $lte: parseInt(req.query.maxPrice, 10) };
+/*il valore 10 nel parseInt serve a controllare che il valore minimo e massimo venga interpretato
+nel sistema decimale*/
+```
+
+Cosa fa in particolare questa parte di codice? Per capirne la struttura vediamo come si comporta `priceFilter` a seconda di cosa gli diamo in pasto:
+
+1. se NON vengono forniti minPrice e maxPrice all'interno dell'URL, priceFilter rimarrà un oggetto vuoto:
+
+```js
+const priceFilter = {};
+```
+
+2. se viene fornito solo `minPrice`, priceFilter includerà una condizione `$gte`:
+
+```js
+// URL: ?minPrice=100
+const priceFilter = {
+  price: { $gte: 100 },
+};
+```
+
+3. se viene fornito solo `maxPrice`, priceFilter includerà una condizione `$lte`
+
+```js
+// URL: ?maxPrice=500
+const priceFilter = {
+  price: { $lte: 500 },
+};
+```
+
+4. Se vengono forniti entrambi, priceFilter includerà sia la condizione `$gte` che `$lte`:
+
+```js
+// Es: minPrice=100, maxPrice=500
+// URL: ?minPrice=100&maxPrice=500
+const priceFilter = {
+  price: { $gte: 100, $lte: 500 },
+};
+```
+
+INFINE a rigor di cronaca, posso rendere il codice ANCORA più robusto:
+
+```js
+productsRouter.get("/", async (req, res, next) => {
+  try {
+    // Estrai i parametri di query con validazione e sanificazione
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = parseInt(req.query.skip, 10) || 0;
+    const sortBy = req.query.sortBy || "createdAt";
+    const order = req.query.order || "asc";
+
+    // Imposta limiti e valori predefiniti
+    const safeLimit = Math.min(Math.max(limit, 1), 100); // Minimo 1, massimo 100
+    const safeSkip = Math.max(skip, 0);
+
+    // Convalida sortBy e order
+    const allowedSortFields = ["createdAt", "price"];
+    const allowedOrders = ["asc", "desc"];
+    const safeSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
+    const safeOrder = allowedOrders.includes(order) ? order : "asc";
+
+    // Opzioni di filtro per il prezzo con validazione
+    const priceFilter = {};
+    if (req.query.minPrice) {
+      const minPrice = parseInt(req.query.minPrice, 10);
+      if (!isNaN(minPrice)) priceFilter.price = { ...priceFilter.price, $gte: minPrice };
+    }
+    if (req.query.maxPrice) {
+      const maxPrice = parseInt(req.query.maxPrice, 10);
+      if (!isNaN(maxPrice)) priceFilter.price = { ...priceFilter.price, $lte: maxPrice };
+    }
+
+    // Costruisci e esegui la query
+    const query = Product.find(priceFilter)
+      .sort({ [safeSortBy]: safeOrder })
+      .limit(safeLimit)
+      .skip(safeSkip);
+
+    const products = await query;
+
+    // Invia la risposta
+    res.json(products);
+  } catch (err) {
+    // Gestione degli errori migliorata
+    console.error(err); // Log dell'errore per il debug
+    res.status(500).send("Si è verificato un errore nel server");
+  }
+});
+//è un po' too much al momento quindi per ora ciccia, anche se ci sono spunti interessanti
+```
+
+## Potenziali vulnerabilità e soluzioni
+
+A che vulnerabilità è sottoposto questo codice?
+
+```js
+productsRouter.get("/", async (req, res, next) => {
+  try {
+    const { limit, skip, sortBy, order } = req.query;
+    const products = await Product.find({
+      $and: [{ price: { $gte: 100 } }, { price: { $lte: 600 } }],
+    })
+      .sort({ [sortBy]: order })
+      .limit(limit)
+      .skip(skip);
+    res.json(products);
+  } catch (err) {
+    next(err);
+  }
+});
+```
+
+Il codice presentato offre diverse potenziali aree di vulnerabilità che un attaccante potrebbe cercare di sfruttare. Ecco alcune tecniche di attacco comuni:
 
 ## Lista dei possibili Query Selectors
 
@@ -653,6 +859,22 @@ export const Author = mongoose.model("authors", AuthorSchema);
 ```
 
 - In sintesi, lo schema definisce la struttura dei dati, mentre il modello fornisce metodi per interagire con i dati nel database in modo specifico per quella struttura.
+
+⚠️ ATTENZIONE: la struttura della funzione mongoose.model è:
+
+```js
+mongoose.model(name, schema, collection, skipInit);
+//name -> nome del modello
+//schema -> lo schema associato a quel modello
+//collection -> il nome della collezione nel dataabse
+//skipInit -> serve a saltare l'inizializzzazione del modello
+```
+
+Ora, focalizziamoci su cosa succede quando fornisco solo i primi due parametri (name e schema come nell'esempio precedente):
+
+- Se fornisco solo il nome del modello e lo schema, Mongoose assegnerà automaticamente il nome della collezione. Questo nome sarà una versione al plurale e in minuscolo del nome del modello. Ad esempio, se il nome del modello è Author, Mongoose cercherà (o creerà, se non esiste) una collezione chiamata authors.
+
+- Inoltre se la collezione specificata (o dedotta) non esiste già nel database, Mongoose la creerà automaticamente quando inserirai il primo documento in quella collezione.
 
 ## Utilizzo variabili d'ambiente
 
