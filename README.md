@@ -14,6 +14,7 @@
   - [index.js](#collegarsi-al-db-tramite-mongoose-indexjs)
   - [Esempi CRUD](#esempi-crud)
   - [Schemi e modelli](#schemi-e-modelli)
+  - [Embedding e referencing](#incosistenza-tra-dati-embedding-e-riferimenti)
   - [Variabili d'ambiente](#utilizzo-variabili-dambiente)
 - [Altro](#altro)
 
@@ -137,7 +138,7 @@ Così facendo a terminale si avrà la lista di tutte le rotte definite in Expres
 
 ## MIDDLEWARES
 
-In Express, un middleware è una funzione che ha accesso agli oggetti di richiesta (request), risposta (response), e successivo middleware nella catena delle richieste. Esso può eseguire operazioni su tali oggetti, modificare la richiesta e la risposta, o terminare la catena delle richieste. I middleware sono utilizzati per aggiungere funzionalità, gestire richieste e risposte, nonché per eseguire azioni specifiche durante il ciclo di vita di una richiesta HTTP.
+In Express, un middleware è una funzione che ha accesso agli oggetti di richiesta (request), risposta (response), e al successivo middleware nella catena delle richieste. Esso può eseguire operazioni su tali oggetti, modificare la richiesta e la risposta, o terminare la catena delle richieste. I middleware sono utilizzati per aggiungere funzionalità, gestire richieste e risposte, nonché per eseguire azioni specifiche durante il ciclo di vita di una richiesta HTTP.
 
 ### Esempio middleware di autenticazione:
 
@@ -915,6 +916,127 @@ Ora, focalizziamoci su cosa succede quando fornisco solo i primi due parametri (
 - Se fornisco solo il nome del modello e lo schema, Mongoose assegnerà automaticamente il nome della collezione. Questo nome sarà una versione al plurale e in minuscolo del nome del modello. Ad esempio, se il nome del modello è Author, Mongoose cercherà (o creerà, se non esiste) una collezione chiamata authors.
 
 - Inoltre se la collezione specificata (o dedotta) non esiste già nel database, Mongoose la creerà automaticamente quando inserirai il primo documento in quella collezione.
+
+## Incosistenza tra dati (embedding e riferimenti)
+
+Osserviamo i seguenti schemi:
+
+1. Schema User:
+
+```js
+const userSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  // Altri campi...
+});
+```
+
+2. Schema Post
+
+```js
+const postSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  author: {
+    name: String,
+    email: String,
+    // Potenzialmente altri campi duplicati da User
+  },
+  // Altri campi...
+});
+```
+
+In questo caso, stiamo utilizzando l'embedding (incorporamento) per rappresentare l'autore di un post. Il problema principale qui è la <u>potenziale incosistenza dei dati</u>. Se un utente aggiorna il suo nome o email nel database, questi cambiamenti non si rifletteranno automaticamente nei post esistenti, perché l'informazione dell'autore è duplicata e incorporata direttamente nello schema del post.
+
+### Embedding
+
+- Nell'embedding, un documento completo (come un utente) è inserito direttamente in un altro documento (come un post). Modifichiamo lo schema Post per incorporare l'intero documento User:
+
+```js
+const postSchema = new mongoose.Schema({
+  title: String,
+  content: String,
+  author: userSchema, // Incorporando lo schema User
+  // Altri campi...
+});
+```
+
+⚠️ Questo approccio è utile <u>quando i dati incorporati NON cambiano frequentemente</u> e la relazione è strettamente accoppiata. Tuttavia, può portare a grandi documenti e problemi di incosistenza se i dati incorporati cambiano frequentemente.
+
+### Referencing
+
+- Nel referencing, invece di incorporare l'intero documento, si memorizza solo un riferimento (come un ID) al documento in un altro schema. Modifichiamo lo schema Post per referenziare lo schema User:
+
+```js
+const postSchema = new Schema({
+  title: String,
+  content: String,
+  author: { type: Schema.Types.ObjectId, ref: "User" }, // Referenziamento
+  // Altri campi...
+});
+```
+
+⚠️ Questo approccio mantiene i documenti snelli e risolve il problema dell'incosistenza dei dati, poiché le modifiche in un documento (es. User) si riflettono ovunque quel documento sia referenziato. Tuttavia <u>richiede query aggiuntive per risolvere i riferimenti</u> quando si accede ai dati.
+
+### Population
+
+La population in Mongoose è una tecnica utilizzata per automatizzare il processo di recupero e integrazione di dati provenienti da documenti differenti all'interno di un database MongoDB. Questo metodo è particolarmente utile quando si lavora con schemi che utilizzano riferimenti (_referencing_) anziché embedding.
+
+La population in Mongoose è una tecnica utilizzata per automatizzare il processo di recupero e integrazione di dati provenienti da documenti differenti all'interno di un database MongoDB. Questo metodo è particolarmente utile quando si lavora con schemi che utilizzano riferimenti (referencing) anziché embedding.
+
+Si usa la population quando:
+
+1. hai una relazione tra due collezioni (es. Utenti e Post) dove una collezione fa riferimento all'altra tramite un ID o un campo simile.
+2. <u>vuoi recuperare dati completi da entrambe le collezioni in una singola query</u>, invece di dover prima recuperare i dati da una collezione e poi eseguire query separate per ottenere dati correlati dalla seconda collezione.
+
+### Esempio di referencing e population
+
+1. si definisce uno schema per gli utenti:
+
+```js
+const userSchema = new Schema({
+  name: String,
+  email: String,
+});
+
+const User = mongoose.model("User", userSchema);
+```
+
+2. si definisce uno schema per i post con un <u>riferimento agli utenti</u>
+
+```js
+const postSchema = new Schema({
+  title: String,
+  content: String,
+  author: { type: Schema.Types.ObjectId, ref: "User" }, // Riferimento a User
+});
+
+const Post = mongoose.model("Post", postSchema);
+```
+
+3. per recuperare i post con i dettagli completi degli autori (non solo gli ID), utilizzo la <u>population</u>:
+
+```js
+app.get("/posts", async (req, res) => {
+  try {
+    const posts = await Post.find({}).populate("author", "-_id -__v");
+    res.json(posts);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Si è verificato un errore nel server");
+  }
+});
+//il secondo parametro di .populate serve ad escludere le chiavi _id  e __v
+//un po' come fa select
+```
+
+In questo codice:
+
+- `.populate('author')` dice a Mongoose di sostituire ogni author (che è un ID) con il documento User corrispondente.
+
+- Il risultato sarà una lista di post, dove ogni post ha il campo author sostituito con i dati completi dell'utente (nome, email, ecc.), anziché solo l'ID.
+
+- Quando eseguo `.populate("author", "-_id -__v")`, Mongoose effettua internamente una <u>doppia query</u>. La prima query recupera tutti i documenti dalla collezione Post. Successivamente, per ogni documento post recuperato, Mongoose effettua una seconda query per trovare e inserire i dati relativi all'autore (author) da una collezione separata (di solito una collezione di utenti o autori).
 
 ## Utilizzo variabili d'ambiente
 
