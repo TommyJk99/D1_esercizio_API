@@ -6,6 +6,9 @@
   - [Tenere traccia delle rotte](#tenere-traccia-delle-rotte)
   - [Middlewares](#middlewares)
   - [Pagination](#pagination)
+  - [Multer e upload file](#importare-file-con-multer)
+  - [CDN](#cdn-content-delivery-network)
+  - [Cloudinary](#cloudinary)
 - [MongoDB Atlas](#mongodb-atlas)
   - [Queries](#queries)
   - [Queries su MDB Compass](#utilizzo-queries-su-mongodb-compass)
@@ -236,7 +239,9 @@ userRouter.post("/", async (req, res, next) => {
 // Esempio userRouter.put
 userRouter.put("/:id", async (req, res, next) => {
   try {
-    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     res.json(updatedUser);
   } catch (error) {
     next(error);
@@ -349,6 +354,92 @@ Utilizzando l'URL `http://localhost:3030/api/products/?limit=10&skip=2`, la rich
 
 Questo codice utilizza i parametri `sortBy` e `order` dalla query per consentire un ordinamento flessibile dei risultati di ricerca. Ad esempio, è possibile ordinare i prodotti per prezzo, nome o qualsiasi altro campo specificato dinamicamente. Nel codice precedente invece, l'ordinamento è fisso sul campo "price" in ordine crescente, senza la possibilità di variare il campo di ordinamento o l'ordine risultante. Un ipotetico URL per sfruttare appieno il codice può essere: `http://localhost:3030/api/products/?limit=10&sortBy=price&order=ascending`
 
+## Importare file con multer
+
+Multer è una libreria middleware per Node.js che facilita il caricamento di file in applicazioni web. È ampiamente utilizzata con il framework Express per gestire i dati di tipo multipart/form-data, che è il formato utilizzato per caricare file da un form HTML.
+
+```js
+//pnpm multer
+import multer from "multer";
+
+const storage = multer.diskStorage({
+  destination: "./uploads",
+  filename: function (req, file, callback) {
+    if (["image/jpeg", "image/png"].includes(file.mimetype)) {
+      callback(null, `${Date.now()}_${file.originalname}`);
+    } else {
+      const error = new Error("Please upload png or jpg");
+      error.statusCode = 500;
+      callback(error);
+    }
+  },
+});
+
+const upload = multer({ storage });
+
+apiRouter.patch("/multipart", upload.single("avatar"), (req, res, next) => {
+  console.log(req.file.path); // stampa il percorso dove viene salvato il file
+  res.send(); // qui uso il mio middleware per caricare l'immagine,il mio endpoint riceverà un solo file.
+});
+
+//il codice sotto serve a recuperare i file nel server tramite il loro percorso MA useremo cloudinary
+// apiRouter.get("/download/:filename"),
+//   (req, res, next) => {
+//     res.send(path.resolve("./src/uploads/" + req.params.filename));
+//   };
+```
+
+Questo codice configura multer per caricare file, limitando i tipi di file a JPEG e PNG e salvandoli in una cartella uploads con nomi di file univoci. Gestisce anche gli errori relativi al tipo di file, restituendo un errore se viene caricato un tipo di file non consono.
+
+Analizziamo meglio il codice:
+
+1. `multer.diskStorage()` serve a memorizzare i file caricati sul disco.
+2. `destination: "./uploads"` specifica la directory in cui i file caricati saranno salvati. In questo caso, i file verranno salvati nella cartella uploads nella directory radice del mio progetto.
+3. `filename: function (req, file, callback) { ... }` cambia il nome del file salvato se l'estensione corrisponde a quella desiderata, se no da errore.
+4. `callback(null, '${Date.now()}_${file.originalname}')` cambia il nome del file salvato e ritorna una cosa del genere: `"1630000000000_foto.png"` dove il numero davanti al nome è dato dalla funzione `Date.now()`
+5. `if (["image/jpeg", "image/png"].includes(file.mimetype))` controlla se il file caricato è il formato giusto se no da errore
+6. `const upload = multer({ storage })` così facendo viene creato il middleware
+
+## CDN (content delivery network)
+
+Un CDN, o Content Delivery Network, è una rete di server distribuiti geograficamente progettata per fornire contenuti web, come immagini, video e pagine HTML, agli utenti in modo più rapido ed efficiente. Quando un utente accede a un sito web, il CDN reindirizza la richiesta al server più vicino geograficamente, riducendo il tempo di caricamento del sito e migliorando l'esperienza dell'utente. Questo è particolarmente utile per siti con traffico elevato o con una base di utenti globale, poiché aiuta a gestire grandi volumi di traffico e riduce il rischio di congestione della rete.
+
+## Cloudinary
+
+Cloudinary è un servizio cloud che fornisce strumenti per caricare, memorizzare, manipolare e distribuire contenuti multimediali come immagini e video. Offre una piattaforma versatile per organizzare e ottimizzare media per web e applicazioni mobili, migliorando le prestazioni e riducendo l'uso della larghezza di banda. Utilizzando funzioni di editing avanzate e una rete di distribuzione dei contenuti (CDN), Cloudinary accelera il caricamento dei media e migliora l'esperienza dell'utente finale, rendendolo ideale per gestire grandi volumi di risorse multimediali in modo efficiente.
+
+### Come implementare cloudinary nel nostro progetto
+
+1. in console: `npm install cloudinary`
+2. in console: `npm multer-storage-cloudinary`
+3. recuperare CLOUDINARY_URL dalla dashboard di cloudinary e creare nuova variabile d'ambiente
+4. il codice diventa:
+
+```js
+import multer from "multer";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import { v2 as cloudinary } from "cloudinary"; //ultima versione di cloudinary, 'as' cambia il nome di v2
+
+const cloudinaryStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "folder-name",
+  },
+});
+
+const upload = multer({ storage: cloudinaryStorage });
+
+apiRouter.patch("/multipart", upload.single("avatar"), (req, res, next) => {
+  console.log(req.file.path);
+  res.send();
+});
+```
+
+- login: yivegoj751@mcenb.com
+- pssw: Epic0de!
+
+## Inviare un' email con Resend
+
 # MongoDB Atlas
 
 - creazione di un'utenza
@@ -396,7 +487,11 @@ db.collection("film").find().limit(5);
 ### 6. Inserimento di un nuovo documento:
 
 ```js
-db.collection("utenti").insertOne({ nome: "Mario", età: 25, email: "mario@example.com" });
+db.collection("utenti").insertOne({
+  nome: "Mario",
+  età: 25,
+  email: "mario@example.com",
+});
 ```
 
 ### 7. Aggiornamento di un documento esistente
@@ -519,8 +614,16 @@ productsRouter.get("/", async (req, res, next) => {
 
     // Opzioni di filtro per il prezzo
     const priceFilter = {};
-    if (req.query.minPrice) priceFilter.price = { ...priceFilter.price, $gte: parseInt(req.query.minPrice, 10) };
-    if (req.query.maxPrice) priceFilter.price = { ...priceFilter.price, $lte: parseInt(req.query.maxPrice, 10) };
+    if (req.query.minPrice)
+      priceFilter.price = {
+        ...priceFilter.price,
+        $gte: parseInt(req.query.minPrice, 10),
+      };
+    if (req.query.maxPrice)
+      priceFilter.price = {
+        ...priceFilter.price,
+        $lte: parseInt(req.query.maxPrice, 10),
+      };
 
     // Costruisci e esegui la query
     const query = Product.find(priceFilter)
@@ -544,8 +647,16 @@ productsRouter.get("/", async (req, res, next) => {
 
 ```js
 const priceFilter = {};
-if (req.query.minPrice) priceFilter.price = { ...priceFilter.price, $gte: parseInt(req.query.minPrice, 10) };
-if (req.query.maxPrice) priceFilter.price = { ...priceFilter.price, $lte: parseInt(req.query.maxPrice, 10) };
+if (req.query.minPrice)
+  priceFilter.price = {
+    ...priceFilter.price,
+    $gte: parseInt(req.query.minPrice, 10),
+  };
+if (req.query.maxPrice)
+  priceFilter.price = {
+    ...priceFilter.price,
+    $lte: parseInt(req.query.maxPrice, 10),
+  };
 /*il valore 10 nel parseInt serve a controllare che il valore minimo e massimo venga interpretato
 nel sistema decimale*/
 ```
@@ -803,7 +914,36 @@ userRouter.get("/:id", async (req, res, next) => {
 });
 ```
 
-### Esempio chiamata POST
+### Esempio chiamata GET (ricerca id all'interno di un vettore di oggetti)
+
+- Questo codice è un esempio di come implementare un endpoint GET in un'applicazione Express per recuperare un commento specifico da un post del blog:
+
+```js
+    .get("/:id/comments/:commentId", async (req, res, next) => {
+    try {
+      const { id, commentId } = req.params;
+
+      const comment = await BlogPost.findOne(
+        { _id: id }, //trova il blog con queste caratteristiche
+        { comments: { $elemMatch: { _id: commentId } } }
+        //restituisce il commenti con questo id
+      );
+
+      if (!comment || !comment.comments.length) {
+        return res.status(404).send("Commento non trovato");
+      }
+
+      console.log(comment); //se guardi i dati che ti arrivano, capisci il perchè della riga sotto
+      res.json(comment.comments[0]);
+    } catch (err) {
+      next(err);
+    }
+  });
+```
+
+`{ comments: { $elemMatch: { _id: commentId } } }` è una proiezione che utilizza l'operatore `$elemMatch`. Questo operatore filtra l'array comments del post del blog, <u>restituendo solo il commento che ha l'ID corrispondente a commentId</u>. In questo modo, anche se ci sono molti commenti, solo quello richiesto viene restituito.
+
+### Esempio chiamata POST (new e save)
 
 - In questo esempio vado a creare un nuovo utente tramite una richiesta POST:
 
@@ -824,6 +964,31 @@ userRouter.post("/", async (req, res, next) => {
 export default userRouter;
 ```
 
+### Esempio chiamata POST ($push e findOneAndUpdate)
+
+```js
+.post("/:id", async (req, res, next) => {
+    try {
+      const { id } = req.params; //estraggo id dall'URL
+      const newComment = req.body; // estraggo il nuovo commento dal body
+
+      const updatedPost = await BlogPost.findOneAndUpdate(
+        { _id: id }, //trovo il blog con questo id
+        { $push: { comments: newComment } }, //pusho un nuovo commento all'interno dell'array di oggetti
+        { new: true, runValidators: true } // restituisce il documento aggiornato e esegue i validatori dello schema
+      );
+
+      if (!updatedPost) {
+        return res.status(404).send("Post non trovato");
+      }
+
+      res.status(201).send("Commento aggiunto con successo!");
+    } catch (err) {
+      next(err);
+    }
+  })
+```
+
 ### Esempio chiamata PUT
 
 - In questo esempio modifico gli attributi di un utente:
@@ -839,6 +1004,32 @@ userRouter.put("/:id", async (req, res, next) => {
     next(error);
   }
 });
+```
+
+### Esempio chiamata PUT ($set e findOneAndUpdate)
+
+```js
+.put("/:id/comments/:commentId", async (req, res, next) => {
+    try {
+      const { id, commentId } = req.params; // Estraggo id e commentId dall'URL
+      const { name, text } = req.body; // Estraggo name e text dal body
+
+      const updatedComment = await BlogPost.findOneAndUpdate(
+        { _id: id, "comments._id": commentId },
+        {
+          $set: {
+            "comments.$.name": name, // Aggiorno il nome del commento
+            "comments.$.text": text, // Aggiorno il testo del commento
+          },
+        },
+        { new: true } // Restituisce il documento aggiornato
+      );
+
+      res.status(200).json(updatedComment);
+    } catch (err) {
+      next(err);
+    }
+  });
 ```
 
 ### Esempio chiamata DELETE
@@ -859,6 +1050,33 @@ userRouter.delete("/:id", async (req, res, next) => {
     next(error);
   }
 });
+```
+
+### Esempio chiamata DELETE ($pull e findOneAndUpdate)
+
+```js
+.delete("/:id/comments/:commentId", async (req, res, next) => {
+    try {
+      const { id, commentId } = req.params;
+
+      // Trova il post e rimuove il commento specifico
+      const updatedPost = await BlogPost.findOneAndUpdate(
+        { _id: id }, //trovo il post che ha questo id
+        { $pull: { comments: { _id: commentId } } }, // Rimuovo il commento che ha come id commentId
+        { new: true } // Restituisco il documento aggiornato
+      );
+
+      if (!updatedPost) {
+        return res
+          .status(404)
+          .send("Post non trovato o commento non esistente");
+      }
+
+      res.status(200).send("Commento eliminato con successo");
+    } catch (err) {
+      next(err);
+    }
+  });
 ```
 
 ## Schemi e modelli
@@ -891,6 +1109,15 @@ const AuthorSchema = new Schema({
   },
   avatar: {
     type: String,
+    required: true,
+  },
+  comments: {
+    type: [
+      {
+        name: { type: String, required: true },
+        text: { type: String, required: true },
+      },
+    ],
     required: true,
   },
 });
@@ -1064,3 +1291,13 @@ dotenv.config();
 - `502 Bad Gateway` ➡️ il server, mentre funzionante come gateway o proxy, ha ricevuto una risposta non valida dal server upstream.
 - `503 Service Unavailable` ➡️ il server non è disponibile al momento. Solitamente temporaneo, il server può essere sovraccarico o in manutenzione.
 - `504 Gateway Timeout` ➡️ il server, mentre funzionante come gateway o proxy, non ha ricevuto una risposta tempestiva dal server upstream.
+
+## Link utili
+
+- https://temp-mail.org/en/ nel caso volessi creare una email temporanea
+- https://www.submarinecablemap.com/ per vedere il traffico dati sottomarino
+- https://cloudinary.com ci consente di parcheggiare i nostri file
+- https://www.garanteprivacy.it/data-breach nel caso ci rompessero il sito
+- https://picsum.photos/ foto a caso
+- https://randomuser.me/ API per utenti a caso (json)
+- https://app.tuta.com/login Tutanota GmbH è un fornitore di posta elettronica cifrata.
